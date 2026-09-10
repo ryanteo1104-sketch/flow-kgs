@@ -1,0 +1,188 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>.
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#>.
+@prefix owl: <http://www.w3.org/2002/07/owl#>.
+@prefix sh: <http://www.w3.org/ns/shacl#>.
+@prefix prov: <http://www.w3.org/ns/prov#>.
+@prefix dcterms: <http://purl.org/dc/terms/>.
+@prefix qudt: <http://qudt.org/schema/qudt/>.
+@prefix unit: <http://qudt.org/vocab/unit/>.
+@prefix quantitykind: <http://qudt.org/vocab/quantitykind/>.
+@prefix ex: <https://the-s-lab.com/kg/ev-battery-explosion#>.
+
+<https://the-s-lab.com/kg/b2552c84-bff1-4c01-8bca-d9bd8d513f24> a owl:Ontology;
+    dcterms:identifier "b2552c84-bff1-4c01-8bca-d9bd8d513f24";
+    dcterms:created "2026-09-10T08:34:33.451Z"^^xsd:dateTime;
+    dcterms:modified "2026-09-10T08:35:49.899Z"^^xsd:dateTime.
+ex:ChainStep a rdfs:Class;
+    rdfs:label "Chain step";
+    rdfs:comment "One of the seven steps from vent gas released to blast overpressure at a standoff.".
+ex:Module a rdfs:Class;
+    rdfs:label "Module";
+    rdfs:comment "A Python module in the ev-battery-safety package.".
+ex:DataItem a rdfs:Class;
+    rdfs:label "Data item";
+    rdfs:comment "A measured or published quantity held in reference/*.csv or inputs/reference.py.".
+ex:Source a rdfs:Class;
+    rdfs:label "Source";
+    rdfs:comment "A publication or laboratory campaign a data item is cited to.".
+ex:Chemistry a rdfs:Class;
+    rdfs:label "Chemistry".
+ex:Defect a rdfs:Class;
+    rdfs:label "Defect";
+    rdfs:comment "A known error, either in a published source or in this codebase.".
+ex:Step1_GasReleased a ex:ChainStep;
+    rdfs:label "Step 1 gas released";
+    rdfs:comment "n = (mol/Ah) x N_cells x C_cell. 0.1340 x 800 x 2.5 = 268.0 mol.";
+    ex:equation "n = yield x N_cells x C_cell";
+    ex:nextStep ex:Step2_Volume;
+    ex:implementedBy ex:mod_reference;
+    ex:requires ex:Data_NMCYield.
+ex:Step2_Volume a ex:ChainStep;
+    rdfs:label "Step 2 volume";
+    rdfs:comment "V = n RT/P at 288.15 K, giving 23.64 L/mol not 22.4. 268 mol -> 6.336843 m3.";
+    ex:equation "V = n RT / P";
+    ex:nextStep ex:Step3_Concentration;
+    ex:implementedBy ex:mod_accumulation.
+ex:mod_reference a ex:Module;
+    rdfs:label "inputs/reference.py".
+ex:Data_NMCYield a ex:DataItem;
+    rdfs:label "NMC measured gas yield";
+    rdfs:comment "0.1340 and 0.0890 mol/Ah. The two tests differ by 50 percent at the same chemistry and SOC.";
+    ex:sourcedFrom ex:Src_VSP2;
+    ex:coversChemistry ex:NMC.
+ex:Step3_Concentration a ex:ChainStep;
+    rdfs:label "Step 3 concentration vs LFL";
+    rdfs:comment "c = V / V_enclosure = 0.352243, compared with the LFL. Currently uses the placeholder table LFL, not the computed mixture LFL.";
+    ex:equation "c = V / V_enclosure";
+    ex:nextStep ex:Step4_EnergyDensity;
+    ex:implementedBy ex:mod_accumulation;
+    ex:requires ex:Data_ChemistryLFL.
+ex:mod_accumulation a ex:Module;
+    rdfs:label "domain/accumulation.py".
+ex:Src_VSP2 a ex:Source;
+    rdfs:label "VSP2 closed-cell calorimetry 2026".
+ex:NMC a ex:Chemistry;
+    rdfs:label "NMC";
+    ex:hasMeasuredYield true;
+    ex:hasComposition false;
+    ex:blocksAtStep ex:Step4_EnergyDensity.
+ex:Step4_EnergyDensity a ex:ChainStep;
+    rdfs:label "Step 4 energy density";
+    rdfs:comment "e = (P/RT) sum(y_i dHc_i), joules per cubic metre of vent gas. Inerts contribute zero.";
+    ex:equation "e = (P/RT) sum(y_i dHc_i)";
+    ex:nextStep ex:Step5_CombustionEnergy;
+    ex:implementedBy ex:mod_energy;
+    ex:requires ex:Data_Composition.
+ex:Data_ChemistryLFL a ex:DataItem;
+    rdfs:label "Chemistry level LFL table";
+    rdfs:comment "One LFL per chemistry. A placeholder that Lesson 2 section 7 replaces with the computed mixture LFL. Differs by up to 52 percent.";
+    ex:sourcedFrom ex:Src_Li2021.
+ex:Step5_CombustionEnergy a ex:ChainStep;
+    rdfs:label "Step 5 combustion energy";
+    rdfs:comment "E = V_gas x e, doubled at grade. V is the vent gas volume from step 2, NOT the enclosure volume.";
+    ex:equation "E = V_gas x e";
+    ex:nextStep ex:Step6_ScaledDistance;
+    ex:implementedBy ex:mod_energy.
+ex:mod_energy a ex:Module;
+    rdfs:label "domain/energy.py".
+ex:Data_Composition a ex:DataItem;
+    rdfs:label "Vent gas composition";
+    ex:sourcedFrom ex:Src_Golubkov2015, ex:Src_Somandepalli2014;
+    ex:coversChemistry ex:LFP, ex:NCA, ex:LCO.
+ex:Src_Li2021 a ex:Source;
+    rdfs:label "Li et al. 2021 iScience 24:102401".
+ex:Step6_ScaledDistance a ex:ChainStep;
+    rdfs:label "Step 6 scaled distance";
+    rdfs:comment "R' = z / (E/P0)^(1/3). The scaling length is the natural ruler of that explosion.";
+    ex:equation "R prime = z / (E/P0)^(1/3)";
+    ex:nextStep ex:Step7_Overpressure;
+    ex:implementedBy ex:mod_energy.
+ex:Src_Golubkov2015 a ex:Source;
+    rdfs:label "Golubkov et al. 2015 RSC Adv 5:57171".
+ex:Src_Somandepalli2014 a ex:Source;
+    rdfs:label "Somandepalli et al. 2014 SAE 3(1):98".
+ex:LFP a ex:Chemistry;
+    rdfs:label "LFP";
+    ex:hasMeasuredYield false;
+    ex:hasComposition true;
+    ex:blocksAtStep ex:Step1_GasReleased.
+ex:NCA a ex:Chemistry;
+    rdfs:label "NCA";
+    ex:hasMeasuredYield false;
+    ex:hasComposition true;
+    ex:blocksAtStep ex:Step1_GasReleased.
+ex:LCO a ex:Chemistry;
+    rdfs:label "LCO";
+    ex:hasMeasuredYield false;
+    ex:hasComposition true;
+    ex:blocksAtStep ex:Step1_GasReleased.
+ex:Step7_Overpressure a ex:ChainStep;
+    rdfs:label "Step 7 overpressure";
+    rdfs:comment "P' = a R'^b, Ps = P' P0. The chain-stop output. Implemented 2026-09-10 from Alonso Table 2.";
+    ex:equation "P prime = a R prime ^ b";
+    ex:implementedBy ex:mod_multi_energy;
+    ex:requires ex:Data_AlonsoTable2.
+ex:mod_multi_energy a ex:Module;
+    rdfs:label "domain/multi_energy.py".
+ex:Data_AlonsoTable2 a ex:DataItem;
+    rdfs:label "Multi-Energy curve coefficients";
+    rdfs:comment "25 piecewise intervals over 10 strength classes. Every flat interval confirmed by Alonso Table 4 at P0 = 101300 Pa.";
+    ex:sourcedFrom ex:Src_Alonso2006.
+ex:Src_Alonso2006 a ex:Source;
+    rdfs:label "Alonso et al. 2006 JHazMat 137(2):734".
+ex:mod_composition a ex:Module;
+    rdfs:label "domain/composition.py".
+ex:mod_flammability a ex:Module;
+    rdfs:label "domain/flammability.py";
+    rdfs:comment "Le Chatelier mixture LFL. Implemented but NOT wired into the CLI.".
+ex:Data_GenerationRate a ex:DataItem;
+    rdfs:label "Gas generation rate";
+    rdfs:comment "12 VSP2 runs. RATE in mol/s, NOT yield in mol/Ah. Feeds the section 6 transient, which is not built.";
+    ex:sourcedFrom ex:Src_VSP2;
+    ex:coversChemistry ex:NMC, ex:LFP, ex:NCA, ex:LCO.
+ex:Src_YellowBook a ex:Source;
+    rdfs:label "TNO Yellow Book CPR 14E 1997".
+ex:Defect_AlonsoClass3 a ex:Defect;
+    rdfs:label "Alonso class 3 continuity break";
+    rdfs:comment "Printed a is 6.05e-2 where continuity implies 3.02e-2, a ratio of 2.006. The pair is identical to class 3 in Table 3, the impulse table. Implemented as printed, pinned by a test.";
+    ex:affects ex:Data_AlonsoTable2;
+    ex:status "as printed, believed typo";
+    ex:foundIn ex:Src_Alonso2006.
+ex:Defect_AlonsoClass4 a ex:Defect;
+    rdfs:label "Alonso class 4 continuity break";
+    rdfs:comment "Printed a is 6.44e-2 against 5.035e-2 implied, +27.9 percent. Bound and flat coefficient both confirmed by Table 4, so no clean typo mechanism. Flagged, not reconstructed.";
+    ex:affects ex:Data_AlonsoTable2;
+    ex:status "as printed, mechanism unknown";
+    ex:foundIn ex:Src_Alonso2006.
+ex:Defect_FarFieldCrossover a ex:Defect;
+    rdfs:label "Alonso far-field crossover";
+    rdfs:comment "Class 7 exceeds class 8 from R prime 1 to 32.8, by 22 percent at R prime 2. Class 7 is fitted with a single power law over 0.5 to 100 where 8-10 are piecewise. Means the 5/7/9 band is unordered across most of the useful range.";
+    ex:affects ex:Data_AlonsoTable2;
+    ex:status "pinned by test, cause unconfirmed";
+    ex:foundIn ex:Src_Alonso2006.
+ex:Defect_LFLInverted a ex:Defect;
+    rdfs:label "Inert dilution inverted";
+    rdfs:comment "mixture_lfl_pct multiplied by the combustible fraction where it must divide, reporting inert dilution as making gas easier to ignite. Traced to Lesson 2 section 7.2 wording 'scale by'. Fixed 2026-09-10.";
+    ex:affects ex:mod_flammability;
+    ex:status "fixed".
+ex:Defect_EnclosureVolume a ex:Defect;
+    rdfs:label "Enclosure volume used for combustion energy";
+    rdfs:comment "combustion_energy_j received the 17.99 m3 enclosure where it needs the 6.337 m3 gas volume, 2.84x too much energy. Lesson 2 eq 11 settles it. Fixed 2026-09-10.";
+    ex:affects ex:mod_energy;
+    ex:status "fixed".
+ex:Defect_RaggedSpecies a ex:Defect;
+    rdfs:label "Ragged species sets across SOC";
+    rdfs:comment "C2H6 absent at LFP 50 percent and NCA 0/25/143 percent, so interpolation across SOC produced NaN. Filled with explicit zeros on a common basis. Fixed 2026-09-10.";
+    ex:affects ex:mod_composition;
+    ex:status "fixed".
+ex:Defect_OxygenLimited a ex:Defect;
+    rdfs:label "Oxygen-limited LFL reported as valid";
+    rdfs:comment "LFP at 0 percent SOC returned 68.96 vol percent with only 1.15x the stoichiometric oxygen present. Nose of the Coward diagram, where LOC governs and Le Chatelier does not apply. Now refused. Threshold is a screening value pending real LOC data.";
+    ex:affects ex:mod_flammability;
+    ex:status "fixed, threshold provisional".
+ex:Gap_NMCComposition a ex:Defect;
+    rdfs:label "NMC composition missing";
+    rdfs:comment "Only about 79 percent of the total found in the literature; normalising from that would fabricate the rest. Blocks steps 4-7, the section 7 LFL upgrade, and any LOC work. The single highest-value data item.";
+    ex:affects ex:Data_Composition;
+    ex:status "open, critical path".
