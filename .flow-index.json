@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "generatedAt": "2026-09-10T08:35:51.149Z",
+  "entries": {
+    "ev-battery-explosion/model-provenance.ttl": {
+      "sha": "f17afce5a211d24e03cacddc59b478353613525e",
+      "id": "b2552c84-bff1-4c01-8bca-d9bd8d513f24",
+      "nodes": 42,
+      "edges": 82,
+      "classes": [
+        "Chain step",
+        "Module",
+        "Data item",
+        "Source",
+        "Chemistry",
+        "Defect"
+      ],
+      "individuals": 36,
+      "updatedAt": "2026-09-10T08:35:51.149Z"
+    }
+  }
+}
